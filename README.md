@@ -1,4 +1,4 @@
-# Orchestrator
+# Chains Orchestrator
 
 A local task orchestrator backed by SQLite. Define tasks as plain Python functions, chain them together, run them, and query the full execution history from a local database.
 
