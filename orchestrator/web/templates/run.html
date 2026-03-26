@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+{% block title %}Run {{ run.id[:8] }} — Orchestrator{% endblock %}
+
+{% block head %}
+<style>
+  .back { font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; display: block; }
+
+  .status-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .status-banner h1 { margin-bottom: 0; }
+
+  .meta-row {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    font-size: 0.85rem;
+    color: #64748b;
+  }
+
+  .meta-row strong { color: #1e293b; }
+
+  /* Diagram section */
+  .section { margin-bottom: 2.5rem; }
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-bottom: 0.75rem;
+  }
+
+  .mermaid-wrap {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  /* Timeline */
+  .timeline-wrap {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .timeline-label {
+    width: 150px;
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: #475569;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .timeline-track {
+    flex: 1;
+    background: #f1f5f9;
+    border-radius: 4px;
+    height: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .timeline-bar {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-radius: 3px;
+    min-width: 2px;
+  }
+
+  .bar-success  { background: #22c55e; }
+  .bar-failed   { background: #ef4444; }
+  .bar-running  { background: #3b82f6; }
+  .bar-pending  { background: #fbbf24; }
+  .bar-skipped  { background: #e2e8f0; }
+
+  .timeline-dur {
+    width: 60px;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if chain %}
+<a class="back" href="/chains/{{ chain.name }}">← {{ chain.name }}</a>
+{% else %}
+<a class="back" href="/">← Dashboard</a>
+{% endif %}
+
+<div class="status-banner">
+  <h1>Run <span class="mono" style="font-size:1rem;">{{ run.id[:8] }}…</span></h1>
+  <span id="status-badge" class="badge badge-{{ run.status.value }}">{{ run.status.value }}</span>
+</div>
+
+<div class="meta-row">
+  {% if run.started_at %}
+  <span><strong>Started</strong> {{ run.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+  {% endif %}
+  {% if duration_s is not none %}
+  <span><strong>Duration</strong> {{ "%.3f"|format(duration_s) }}s</span>
+  {% endif %}
+  {% if chain %}
+  <span><strong>Chain</strong> {{ chain.name }}</span>
+  {% endif %}
+</div>
+
+<!-- Mermaid pipeline diagram -->
+<div class="section">
+  <div class="section-title">Pipeline</div>
+  <div class="mermaid-wrap">
+    <pre id="mermaid-diagram" class="mermaid">{{ mermaid }}</pre>
+  </div>
+</div>
+
+<!-- Timeline -->
+<div class="section">
+  <div class="section-title">Timeline</div>
+  <div class="timeline-wrap" id="timeline-container">
+    {% for bar in timeline %}
+    <div class="timeline-row" id="trow-{{ loop.index0 }}">
+      <div class="timeline-label" title="{{ bar.name }}">{{ bar.name }}</div>
+      <div class="timeline-track">
+        {% if bar.has_bar %}
+        <div class="timeline-bar bar-{{ bar.status }}"
+             style="left:{{ bar.offset_pct }}%;width:{{ bar.width_pct }}%;"></div>
+        {% else %}
+        <div class="timeline-bar bar-skipped" style="left:0;width:100%;opacity:0.3;"></div>
+        {% endif %}
+      </div>
+      <div class="timeline-dur">
+        {% if bar.duration_s is not none %}{{ "%.2f"|format(bar.duration_s) }}s{% else %}—{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Steps table -->
+<div class="section">
+  <div class="section-title">Steps</div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Task</th>
+          <th>Status</th>
+          <th>Duration</th>
+          <th>Retries</th>
+          <th>Output Keys</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for step in steps %}
+        <tr>
+          <td style="color:#94a3b8;width:2rem;">{{ loop.index }}</td>
+          <td><strong>{{ step.name }}</strong></td>
+          <td><span class="badge badge-{{ step.status }}">{{ step.status }}</span></td>
+          <td style="color:#64748b;font-size:0.8rem;">
+            {% if step.duration_s is not none %}{{ "%.3f"|format(step.duration_s) }}s{% else %}—{% endif %}
+          </td>
+          <td style="color:#64748b;font-size:0.8rem;">
+            {% if step.retries %}↻ {{ step.retries }}{% else %}—{% endif %}
+          </td>
+          <td class="mono" style="color:#64748b;">{{ step.output_keys | join(", ") or "—" }}</td>
+        </tr>
+        {% if step.error %}
+        <tr>
+          <td colspan="6" style="padding-bottom:0.75rem;">
+            <pre class="error-box">{{ step.error }}</pre>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if run.status.value == "running" %}
+<script>
+  const RUN_ID = "{{ run.id }}";
+  const POLL_INTERVAL = 1000;
+
+  function statusClass(s) {
+    return "badge badge-" + s;
+  }
+
+  function updateTimeline(timeline) {
+    timeline.forEach(function(bar, i) {
+      const row = document.getElementById("trow-" + i);
+      if (!row) return;
+      const track = row.querySelector(".timeline-track");
+      track.innerHTML = bar.has_bar
+        ? `<div class="timeline-bar bar-${bar.status}" style="left:${bar.offset_pct}%;width:${bar.width_pct}%;"></div>`
+        : `<div class="timeline-bar bar-skipped" style="left:0;width:100%;opacity:0.3;"></div>`;
+      const dur = row.querySelector(".timeline-dur");
+      dur.textContent = bar.duration_s !== null ? bar.duration_s.toFixed(2) + "s" : "—";
+    });
+  }
+
+  function updateMermaid(steps) {
+    const classDefs = [
+      "  classDef success fill:#22c55e,stroke:#16a34a,color:#fff",
+      "  classDef failed  fill:#ef4444,stroke:#dc2626,color:#fff",
+      "  classDef skipped fill:#9ca3af,stroke:#6b7280,color:#fff",
+      "  classDef pending fill:#fbbf24,stroke:#d97706,color:#000",
+      "  classDef running fill:#3b82f6,stroke:#2563eb,color:#fff",
+    ].join("\n") + "\n";
+
+    // Pre-pass: collect option names from branch tasks
+    const optionSet = new Set();
+    steps.forEach(s => {
+      if (s.task_type === "branch" && s.branch_options) {
+        s.branch_options.forEach(o => optionSet.add(o));
+      }
+    });
+
+    let src = "flowchart LR\n";
+
+    if (optionSet.size === 0) {
+      // Backward compatible: linear flow
+      const nodeIds = steps.map(s => s.name.replace(/-/g, "_") + ":::" + s.status);
+      if (nodeIds.length === 1) {
+        src += "  " + nodeIds[0] + "\n";
+      } else {
+        src += "  " + nodeIds.join(" --> ") + "\n";
+      }
+    } else {
+      // Branching mode: declare all nodes first
+      steps.forEach(s => {
+        const safe = s.name.replace(/-/g, "_");
+        if (s.task_type === "branch") {
+          src += `  ${safe}{${s.name}}:::${s.status}\n`;
+        } else {
+          src += `  ${safe}[${s.name}]:::${s.status}\n`;
+        }
+      });
+
+      // Emit edges
+      const alreadyConnected = new Set();
+      let prevSafe = null;
+      let i = 0;
+      while (i < steps.length) {
+        const step = steps[i];
+        const safe = step.name.replace(/-/g, "_");
+
+        if (step.task_type === "branch") {
+          if (prevSafe) src += `  ${prevSafe} --> ${safe}\n`;
+          const opts = step.branch_options || [];
+          opts.forEach(opt => { src += `  ${safe} --> ${opt.replace(/-/g, "_")}\n`; });
+
+          // Find convergence point (first step after options)
+          let j = i + 1;
+          while (j < steps.length && optionSet.has(steps[j].name)) j++;
+          if (j < steps.length) {
+            const convSafe = steps[j].name.replace(/-/g, "_");
+            opts.forEach(opt => { src += `  ${opt.replace(/-/g, "_")} --> ${convSafe}\n`; });
+            alreadyConnected.add(convSafe);
+          }
+          prevSafe = safe;
+          i++;
+        } else if (optionSet.has(step.name)) {
+          i++;
+        } else {
+          if (prevSafe && !alreadyConnected.has(safe)) src += `  ${prevSafe} --> ${safe}\n`;
+          prevSafe = safe;
+          i++;
+        }
+      }
+    }
+
+    src += classDefs;
+    const el = document.getElementById("mermaid-diagram");
+    el.removeAttribute("data-processed");
+    el.textContent = src;
+    mermaid.init(undefined, el);
+  }
+
+  let poller = setInterval(async function() {
+    try {
+      const resp = await fetch("/api/runs/" + RUN_ID);
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      // Update status badge
+      const badge = document.getElementById("status-badge");
+      badge.className = statusClass(data.status);
+      badge.textContent = data.status;
+
+      // Update timeline
+      updateTimeline(data.timeline);
+
+      // Update mermaid diagram
+      updateMermaid(data.steps);
+
+      // Stop polling when done
+      if (data.status === "success" || data.status === "failed") {
+        clearInterval(poller);
+        // Reload to get the full server-rendered view
+        setTimeout(() => location.reload(), 500);
+      }
+    } catch (e) {
+      // Network error — keep trying
+    }
+  }, POLL_INTERVAL);
+</script>
+{% endif %}
+{% endblock %}

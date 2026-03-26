@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Orchestrator{% endblock %}
+
+{% block head %}
+<style>
+  .chain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+
+  .chain-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+
+  .chain-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.07);
+    border-color: #cbd5e1;
+  }
+
+  .chain-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .chain-card .desc {
+    font-size: 0.85rem;
+    color: #64748b;
+    flex: 1;
+  }
+
+  .chain-card .meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-top: 0.25rem;
+  }
+
+  .schedule-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    font-family: monospace;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    margin-top: 0.35rem;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 4rem 0;
+    color: #94a3b8;
+    font-size: 0.95rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Chains</h1>
+
+{% if chain_data %}
+<div class="chain-grid">
+  {% for item in chain_data %}
+  {% set chain = item.chain %}
+  {% set last_run = item.last_run %}
+  <a href="/chains/{{ chain.name }}" style="text-decoration:none;color:inherit;">
+    <div class="chain-card">
+      <h3>{{ chain.name }}</h3>
+      {% if chain.description %}
+        <p class="desc">{{ chain.description }}</p>
+      {% else %}
+        <p class="desc" style="font-style:italic;">No description</p>
+      {% endif %}
+      {% if chain.schedule %}
+        <div>
+          <span class="schedule-pill" title="Next: {{ item.next_run_at or 'unknown' }}">
+            ⏱ {{ chain.schedule }}
+          </span>
+        </div>
+      {% endif %}
+      <div class="meta">
+        <span>{{ item.run_count }} run{{ 's' if item.run_count != 1 }}</span>
+        {% if last_run %}
+          <span class="badge badge-{{ last_run.status.value }}">{{ last_run.status.value }}</span>
+        {% else %}
+          <span class="badge badge-pending">No runs</span>
+        {% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">
+  <p>No chains found. Run <code>python main.py</code> to populate the database.</p>
+</div>
+{% endif %}
+{% endblock %}

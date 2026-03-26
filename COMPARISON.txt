@@ -1,0 +1,67 @@
+Orchestrator vs Production Systems (Airflow / Prefect)
+=======================================================
+
+EXECUTION MODEL
+---------------
+Execution:    Single-process, synchronous, blocking
+              vs. distributed workers (Celery, Kubernetes, etc.)
+
+Parallelism:  None — tasks run one at a time
+              vs. parallel task execution within a DAG
+
+Scheduling:   Manual (run_chain() call only)
+              vs. cron-based, interval, and event-triggered scheduling
+
+Dependencies: Linear chain only
+              vs. arbitrary DAG — fan-out, fan-in, branching
+
+
+RELIABILITY
+-----------
+- No retries: a failed task stays failed; production tools retry with
+  backoff and jitter
+- No timeouts: a hung task hangs forever
+- No concurrency control: nothing prevents two processes from running the
+  same chain simultaneously and corrupting state
+- No exactly-once guarantees: duplicate runs are possible
+- No task deduplication or idempotency enforcement
+
+
+DEPLOYMENT
+----------
+- No worker pool: cannot scale out or run tasks on remote machines
+- No queue: no way to buffer work or rate-limit execution
+- No backfill: Airflow can retroactively run a schedule over a historical
+  date range
+- No external triggers: no webhooks, sensors, or event-driven starts
+
+
+OBSERVABILITY
+-------------
+- No alerting: failures are silent unless you query the DB
+- No metrics: no task throughput, SLA tracking, or queue depth
+- No log streaming: stdout goes to the terminal, not captured per task run
+- No audit trail: no record of who triggered a run or from where
+
+
+ECOSYSTEM
+---------
+- No integrations: Airflow/Prefect have hundreds of providers (S3,
+  Snowflake, Slack, dbt, etc.)
+- No secrets management: credentials go in plain code or env vars
+- No parameterisation UI: cannot trigger a run with custom inputs from
+  a web form
+- No RBAC: no concept of users, roles, or access control
+
+
+WHAT THIS ORCHESTRATOR IS GOOD FOR
+-----------------------------------
+- Local scripts and pipelines where you want structured execution history
+  without standing up infrastructure
+- Testing and prototyping task logic before migrating to a heavier system
+- Embedded use inside an application where you control the execution loop
+- Learning: the codebase is ~300 lines total, so the entire model is readable
+
+The core design (tasks as functions -> chain -> run -> task_run hierarchy
+in SQLite) maps directly onto how Airflow and Prefect think about work.
+The concepts transfer; the operational concerns do not.

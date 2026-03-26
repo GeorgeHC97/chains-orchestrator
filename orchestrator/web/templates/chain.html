@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ chain.name }} — Orchestrator{% endblock %}
+
+{% block head %}
+<style>
+  .back { font-size: 0.85rem; color: #64748b; margin-bottom: 1rem; display: block; }
+  .subtitle { color: #64748b; margin-bottom: 1rem; font-size: 0.9rem; }
+
+  .schedule-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 1.25rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+  }
+
+  .schedule-box .cron {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #1e293b;
+  }
+
+  .schedule-box .next {
+    color: #64748b;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<a class="back" href="/">← Dashboard</a>
+<h1>{{ chain.name }}</h1>
+{% if chain.description %}
+  <p class="subtitle">{{ chain.description }}</p>
+{% endif %}
+{% if chain.schedule %}
+<div class="schedule-box">
+  <span>⏱ Schedule</span>
+  <span class="cron">{{ chain.schedule }}</span>
+  {% if next_run_at %}
+    <span class="next">Next run: <strong>{{ next_run_at }}</strong></span>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if run_rows %}
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead>
+      <tr>
+        <th>Run ID</th>
+        <th>Status</th>
+        <th>Started</th>
+        <th>Duration</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in run_rows %}
+      {% set run = item.run %}
+      <tr>
+        <td class="mono"><a href="/runs/{{ run.id }}">{{ run.id[:8] }}…</a></td>
+        <td><span class="badge badge-{{ run.status.value }}">{{ run.status.value }}</span></td>
+        <td style="color:#64748b;font-size:0.8rem;">
+          {% if run.started_at %}{{ run.started_at.strftime('%Y-%m-%d %H:%M:%S') }}{% else %}—{% endif %}
+        </td>
+        <td style="color:#64748b;font-size:0.8rem;">
+          {% if item.duration_s is not none %}{{ "%.3f"|format(item.duration_s) }}s{% else %}—{% endif %}
+        </td>
+        <td><a href="/runs/{{ run.id }}">View →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p style="color:#94a3b8;">No runs yet for this chain.</p>
+{% endif %}
+{% endblock %}

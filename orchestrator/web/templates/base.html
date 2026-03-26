@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Orchestrator{% endblock %}</title>
+  <script src="https://unpkg.com/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    nav {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      height: 52px;
+    }
+
+    nav a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    nav a:first-child {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #f8fafc;
+    }
+
+    nav a:hover { color: #f8fafc; }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 1.25rem; }
+    h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
+
+    /* Status badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .badge-success  { background: #dcfce7; color: #15803d; }
+    .badge-failed   { background: #fee2e2; color: #b91c1c; }
+    .badge-running  { background: #dbeafe; color: #1d4ed8; }
+    .badge-pending  { background: #fef9c3; color: #a16207; }
+    .badge-skipped  { background: #f1f5f9; color: #475569; }
+
+    /* Cards */
+    .card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+    }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th { text-align: left; padding: 0.6rem 0.75rem; background: #f1f5f9;
+         color: #64748b; font-size: 0.75rem; font-weight: 600;
+         text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 0.65rem 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+
+    a { color: #3b82f6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .mono { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.8rem; }
+
+    /* Error pre */
+    pre.error-box {
+      background: #fff1f2;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      padding: 0.75rem;
+      font-size: 0.75rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+      color: #b91c1c;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav>
+    <a href="/">Orchestrator</a>
+    <a href="/">Dashboard</a>
+  </nav>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: "default", flowchart: { useMaxWidth: true } });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
